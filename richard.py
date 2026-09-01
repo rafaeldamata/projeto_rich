@@ -6,6 +6,16 @@ from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 # 1. Carregar os dados do arquivo CSV
 df = pd.read_csv('ticks_tempo_bid.csv')
+inicio = 0
+fim = 10
+inicio_teste = fim
+fim_teste = fim + 30
+df_corte_teste = df.iloc[inicio_teste : fim_teste].copy()
+bid_data_corte_teste = df_corte_teste['Bid'].values
+t_data_corte_teste = df_corte_teste['Tempo (t)'].values
+df_corte = df.iloc[inicio : fim].copy()
+t_data_corte = df_corte["Tempo (t)"].values
+bid_data_corte = df_corte['Bid'].values
 t_data = df['Tempo (t)'].values
 bid_data = df['Bid'].values
 
@@ -18,7 +28,7 @@ def richards(t, A, K, B, t0, nu, Q):
     return A + (K - A) / ((1 + Q * np.exp(-B * (t - t0))) ** (1 / nu))
 
 # 3. Estimativa inicial dos parâmetros [A, K, B, t0, nu, Q]
-p0 = [min(bid_data), max(bid_data), 0.12, 45.0, 0.85, 1.0]
+p0 = [min(bid_data_corte), max(bid_data_corte), 0.12, 45.0, 0.85, 1.0]
 
 # Limites de busca (bounds) para garantir estabilidade numérica no Forex
 bounds = (
@@ -29,8 +39,8 @@ bounds = (
 # 4. Execução da Regressão Não Linear
 popt, pcov = curve_fit(
     richards, 
-    t_data, 
-    bid_data, 
+    t_data_corte, 
+    bid_data_corte, 
     p0=p0, 
     bounds=bounds, 
     method='trf', 
@@ -40,11 +50,11 @@ popt, pcov = curve_fit(
 A_opt, K_opt, B_opt, t0_opt, nu_opt, Q_opt = popt
 
 # 5. Cálculo dos valores previstos e métricas de acerto
-bid_pred = richards(t_data, *popt)
+bid_pred = richards(t_data_corte_teste, *popt)
 
-r2 = r2_score(bid_data, bid_pred)
-rmse = np.sqrt(mean_squared_error(bid_data, bid_pred))
-mae = mean_absolute_error(bid_data, bid_pred)
+r2 = r2_score(bid_data_corte_teste, bid_pred)
+rmse = np.sqrt(mean_squared_error(bid_data_corte_teste, bid_pred))
+mae = mean_absolute_error(bid_data_corte_teste, bid_pred)
 
 # 6. Exibição dos Parâmetros Otimizados
 print("=" * 50)
@@ -65,7 +75,7 @@ print("=" * 50)
 # 7. Visualização Gráfica da Regressão
 plt.figure(figsize=(10, 6), dpi=150)
 plt.plot(t_data, bid_data, 'o', color='#1f77b4', label='Ticks Bid Observados', markersize=4, alpha=0.7)
-plt.plot(t_data, bid_pred, '-', color='#d62728', label=f'Curva de Richards ($R^2 = {r2*100:.4f}\\%$)', linewidth=2)
+plt.plot(t_data_corte_teste, bid_pred, '-', color='#d62728', label=f'Curva de Richards ($R^2 = {r2*100:.4f}\\%$)', linewidth=2)
 
 plt.title('Regressão Não Linear - Ajuste dos Ticks Forex com Função de Richards', fontsize=12, fontweight='bold')
 plt.xlabel('Tempo ($t$ / Ticks)')
